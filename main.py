@@ -12,11 +12,11 @@ from construct import (
     Int64un,
     ConstructError,
 )
-import sys
 import binascii
+import sys
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} [a.out]")
         exit(1)
@@ -50,14 +50,12 @@ def main():
         except ConstructError:
             i = 0
             while i < len(bytes):
-                print(binascii.hexlify(bytes[i : i + 8]), end=" ")
-                i += 8
-                print(binascii.hexlify(bytes[i : i + 8]), end=" ")
-                i += 8
-                print(binascii.hexlify(bytes[i : i + 8]), end=" ")
-                i += 8
-                print(binascii.hexlify(bytes[i : i + 8]))
-                i += 8
+                for _ in range(4):
+                    block = bytes[i : i + 8]
+                    if block:
+                        print(binascii.hexlify(block), end=" ")
+                    i += 8
+                    print()
             exit(1)
 
         print(f"Class: {e_class[data._class]}")
