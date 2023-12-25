@@ -12,7 +12,6 @@ from construct import (
     Int64un,
     ConstructError,
 )
-import binascii
 import sys
 
 
@@ -47,15 +46,8 @@ def main() -> None:
         )
         try:
             data = format.parse(bytes)
-        except ConstructError:
-            i = 0
-            while i < len(bytes):
-                for _ in range(4):
-                    block = bytes[i : i + 8]
-                    if block:
-                        print(binascii.hexlify(block), end=" ")
-                    i += 8
-                    print()
+        except ConstructError as e:
+            print(e)
             exit(1)
 
         print(f"Class: {e_class[data._class]}")
@@ -78,6 +70,21 @@ def main() -> None:
             print(f"Type: {e_type[data.type]}")
         else:
             print(f"e_type is not defined: {data.type}")
+
+        print(f"Entry point: {hex(data.entry_point)}")
+
+
+def hexdump(b: bytes) -> None:
+    import binascii
+
+    i = 0
+    while i < len(b):
+        for _ in range(4):
+            block = b[i : i + 8]
+            if block:
+                print(binascii.hexlify(block), end=" ")
+            i += 8
+            print()
 
 
 # ELF Header Format Dictionaries
