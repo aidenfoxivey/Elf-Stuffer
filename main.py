@@ -39,10 +39,9 @@ def main() -> None:
             "header_size" / Int16un,
             "entry_size" / Int16un,
             "entry_count" / Int16un,
-            "entry_index" / Int16un,
             "section_size" / Int16un,
             "section_count" / Int16un,
-            "section_index" / Int16un,
+            "section_names_index" / Int16un,
         )
         try:
             data = format.parse(bytes)
@@ -72,6 +71,24 @@ def main() -> None:
             print(f"e_type is not defined: {data.type}")
 
         print(f"Entry point: {hex(data.entry_point)}")
+
+        print(f"Program header offset: {hex(data.program_header_offset)}")
+
+        print (f"Section header offset: {hex(data.section_header_offset)}")
+
+        print(f"Flags: {hex(data.flags)}")
+
+        print(f"Header size: {hex(data.header_size)} ({int(data.header_size)} bytes)")
+
+        print(f"Entry size: {hex(data.entry_size)} ({int(data.entry_size)} bytes per program table header entry)")
+
+        print(f"Entry count: {hex(data.entry_count)} ({int(data.entry_count)})")
+
+        print(f"Section size: {hex(data.section_size)} ({int(data.section_size)} bytes per section header table entry)")
+
+        print(f"Section count: {hex(data.section_count)} ({int(data.section_count)})")
+
+        print(f"Index with section names: {hex(data.section_names_index)}")
 
 
 def hexdump(b: bytes) -> None:
