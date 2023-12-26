@@ -49,6 +49,8 @@ def main() -> None:
             print(e)
             exit(1)
 
+        print("\n***ELF HEADER***")
+
         print(f"Class: {e_class[data._class]}")
 
         if data.endian in e_endian.keys():
@@ -89,6 +91,67 @@ def main() -> None:
         print(f"Section count: {hex(data.section_count)} ({int(data.section_count)})")
 
         print(f"Index with section names: {hex(data.section_names_index)}")
+
+        # program header struct
+        ph_format = Struct(
+            "type" / Int32un,
+            "flags" / Int32un,
+            "offset" / Int64un,
+            "virtual_address" / Int64un,
+            "physical_address" / Int64un,
+            "size_file" / Int64un,
+            "size_memory" / Int64un,
+            "alignment" / Int64un,
+        )
+        
+        
+        # section header struct
+        sh_format = Struct(
+            "name" / Int32un, 
+            "type" / Int64un,
+            "flags" / Int64un,
+            "virtual_address" / Int64un, # virtual address of section in memory
+            "offset" / Int64un, 
+            "size" / Int32un,
+            "link_index" / Int32un, # contains section index of associated section
+            "info" / Int32un, # contains extra info about section
+            "address_align" / Int64un, # required alignment
+            "entry_size" / Int64un, # size for fized size entries
+        )
+        
+        print("\n***PROGRAM HEADER TABLE***")
+
+        
+        for i in range(int(data.entry_count)):
+
+            try:
+                f.seek(0x40 + 0x38*i,0)
+                bytes = f.read()
+                ph_data = ph_format.parse(bytes)
+            except ConstructError as e:
+                print(e)
+                exit(1)
+
+            if ph_data.type in e_ph_type.keys():
+                print(f"Type: {e_ph_type[ph_data.type]}")
+            else:
+                print(f"e_type is not defined: {ph_data.type}")
+        
+            if ph_data.flags in e_ph_flags.keys():
+                print(f"Flags: {e_ph_flags[ph_data.flags]}")
+            else:
+                print(f"e_ph_type is not defined: {ph_data.flags}")
+
+            print(f"Offset: {hex(ph_data.offset)}")
+
+            print(f"Virtual Addr: {hex(ph_data.virtual_address)}")
+
+            print(f"Alignment: {hex(ph_data.alignment)}")
+
+            print()
+        
+
+
 
 
 def hexdump(b: bytes) -> None:
@@ -320,6 +383,32 @@ e_machine = {
     223: "Moxie processor family",
     224: "AMD GPU architecture",
     243: "RISC-V",
+}
+
+# Program Header Format dictionaries
+e_ph_type = {
+    0x00: "Unused entry",
+    0x01: "Loadable segment",
+    0x02: "Dynamic linking information",
+    0x03: "Interpreter information",
+    0x04: "Auxiliary information",
+    0x05: "Reserved",
+    0x06: "Segment containing program header table itself",
+    0x07: "Thread-Local Storage template",
+    0x60000000: "Reserved inclusive range",
+    0x6FFFFFFF: "Reserved inclusive range",
+    0x70000000: "Reserved inclusive range",
+    0x7FFFFFFF: "Reserved inclusive range",
+}
+
+e_ph_flags = {
+    0x01: "--X",
+    0x02: "-W-",
+    0x03: "-WX",
+    0x04: "R--",
+    0x05: "R-X",
+    0x06: "RW-",
+    0x07: "RWX",
 }
 
 
