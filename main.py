@@ -3,16 +3,10 @@
 
 
 from construct import (
-    Struct,
-    Const,
-    Int8un,
-    Int16un,
-    Padding,
-    Int32un,
-    Int64un,
     ConstructError,
 )
 import sys
+import elfformat
 
 
 def main() -> None:
@@ -22,136 +16,83 @@ def main() -> None:
 
     with open(sys.argv[1], "rb") as f:
         bytes = f.read()
-        format = Struct(
-            "signature" / Const(b"\x7fELF"),
-            "_class" / Int8un,
-            "endian" / Int8un,
-            "version" / Int8un,
-            "abi" / Int8un,
-            Padding(8),
-            "type" / Int16un,
-            "machine" / Int16un,
-            "version" / Int32un,
-            "entry_point" / Int64un,
-            "program_header_offset" / Int64un,
-            "section_header_offset" / Int64un,
-            "flags" / Int32un,
-            "header_size" / Int16un,
-            "entry_size" / Int16un,
-            "entry_count" / Int16un,
-            "section_size" / Int16un,
-            "section_count" / Int16un,
-            "section_names_index" / Int16un,
-        )
-        try:
-            data = format.parse(bytes)
-        except ConstructError as e:
-            print(e)
-            exit(1)
 
-        print("\n***ELF HEADER***")
+        data = try_parse(elfformat.elf, bytes)
 
-        print(f"Class: {e_class[data._class]}")
+        print(data)
 
-        if data.endian in e_endian.keys():
-            print(f"{sys.argv[1]} is {e_endian[data.endian]} endian.")
-        else:
-            print(f"e_endian is not defined: {data.endian}")
+        # print("\n***ELF HEADER***")
 
-        print(f"Version: {data.version}")
+        # print(f"Class: {e_class[data._class]}")
 
-        print(f"ABI: {e_osabi[data.abi]}")
+        # if data.endian in e_endian.keys():
+        #     print(f"{sys.argv[1]} is {e_endian[data.endian]} endian.")
+        # else:
+        #     print(f"e_endian is not defined: {data.endian}")
 
-        if data.machine in e_machine.keys():
-            print(f"Machine: {e_machine[data.machine]}")
-        else:
-            print(f"e_machine is not defined: {data.machine}")
+        # print(f"Version: {data.version}")
 
-        if data.type in e_type.keys():
-            print(f"Type: {e_type[data.type]}")
-        else:
-            print(f"e_type is not defined: {data.type}")
+        # print(f"ABI: {e_osabi[data.abi]}")
 
-        print(f"Entry point: {hex(data.entry_point)}")
+        # if data.machine in e_machine.keys():
+        #     print(f"Machine: {e_machine[data.machine]}")
+        # else:
+        #     print(f"e_machine is not defined: {data.machine}")
 
-        print(f"Program header offset: {hex(data.program_header_offset)}")
+        # if data.type in e_type.keys():
+        #     print(f"Type: {e_type[data.type]}")
+        # else:
+        #     print(f"e_type is not defined: {data.type}")
 
-        print (f"Section header offset: {hex(data.section_header_offset)}")
+        # print(f"Entry point: {hex(data.entry_point)}")
 
-        print(f"Flags: {hex(data.flags)}")
+        # print(f"Program header offset: {hex(data.program_header_offset)}")
 
-        print(f"Header size: {hex(data.header_size)} ({int(data.header_size)} bytes)")
+        # print(f"Section header offset: {hex(data.section_header_offset)}")
 
-        print(f"Entry size: {hex(data.entry_size)} ({int(data.entry_size)} bytes per program table header entry)")
+        # print(f"Flags: {hex(data.flags)}")
 
-        print(f"Entry count: {hex(data.entry_count)} ({int(data.entry_count)})")
+        # print(f"Header size: {hex(data.header_size)} ({(data.header_size)} bytes)")
 
-        print(f"Section size: {hex(data.section_size)} ({int(data.section_size)} bytes per section header table entry)")
+        # print(
+        #     f"Entry size: {hex(data.entry_size)} ({(data.entry_size)} bytes per program table header entry)"
+        # )
 
-        print(f"Section count: {hex(data.section_count)} ({int(data.section_count)})")
+        # print(f"Entry count: {hex(data.entry_count)} ({(data.entry_count)})")
 
-        print(f"Index with section names: {hex(data.section_names_index)}")
+        # print(
+        #     f"Section size: {hex(data.section_size)} ({(data.section_size)} bytes per section header table entry)"
+        # )
 
-        # program header struct
-        ph_format = Struct(
-            "type" / Int32un,
-            "flags" / Int32un,
-            "offset" / Int64un,
-            "virtual_address" / Int64un,
-            "physical_address" / Int64un,
-            "size_file" / Int64un,
-            "size_memory" / Int64un,
-            "alignment" / Int64un,
-        )
-        
-        
-        # section header struct
-        sh_format = Struct(
-            "name" / Int32un, 
-            "type" / Int64un,
-            "flags" / Int64un,
-            "virtual_address" / Int64un, # virtual address of section in memory
-            "offset" / Int64un, 
-            "size" / Int32un,
-            "link_index" / Int32un, # contains section index of associated section
-            "info" / Int32un, # contains extra info about section
-            "address_align" / Int64un, # required alignment
-            "entry_size" / Int64un, # size for fized size entries
-        )
-        
-        print("\n***PROGRAM HEADER TABLE***")
+        # print(f"Section count: {hex(data.section_count)} ({(data.section_count)})")
 
-        
-        for i in range(int(data.entry_count)):
+        # print(f"Index with section names: {hex(data.section_names_index)}")
 
-            try:
-                f.seek(0x40 + 0x38*i,0)
-                bytes = f.read()
-                ph_data = ph_format.parse(bytes)
-            except ConstructError as e:
-                print(e)
-                exit(1)
+        # print("\n***PROGRAM HEADER TABLE***")
 
-            if ph_data.type in e_ph_type.keys():
-                print(f"Type: {e_ph_type[ph_data.type]}")
-            else:
-                print(f"e_type is not defined: {ph_data.type}")
-        
-            if ph_data.flags in e_ph_flags.keys():
-                print(f"Flags: {e_ph_flags[ph_data.flags]}")
-            else:
-                print(f"e_ph_type is not defined: {ph_data.flags}")
+        # for i in range(data.entry_count):
+        #     f.seek(0x40 + 0x38 * i, 0)
+        #     bytes = f.read()
+        #     ph_data = try_parse(elfformat.program_header, bytes)
+        #     print(ph_data)
 
-            print(f"Offset: {hex(ph_data.offset)}")
+            # if ph_data.type in e_ph_type.keys():
+            #     print(f"Type: {e_ph_type[ph_data.type]}")
+            # else:
+            #     print(f"e_type is not defined: {ph_data.type}")
 
-            print(f"Virtual Addr: {hex(ph_data.virtual_address)}")
+            # if ph_data.flags in e_ph_flags.keys():
+            #     print(f"Flags: {e_ph_flags[ph_data.flags]}")
+            # else:
+            #     print(f"e_ph_type is not defined: {ph_data.flags}")
 
-            print(f"Alignment: {hex(ph_data.alignment)}")
+            # print(f"Offset: {hex(ph_data.offset)}")
 
-            print()
-        
+            # print(f"Virtual Addr: {hex(ph_data.virtual_address)}")
 
+            # print(f"Alignment: {hex(ph_data.alignment)}")
 
+            # print()
 
 
 def hexdump(b: bytes) -> None:
@@ -165,6 +106,15 @@ def hexdump(b: bytes) -> None:
                 print(binascii.hexlify(block), end=" ")
             i += 8
             print()
+
+
+def try_parse(format, bytes):
+    try:
+        data = format.parse(bytes)
+    except ConstructError as e:
+        print(e)
+        exit(1)
+    return data
 
 
 # ELF Header Format Dictionaries
@@ -385,16 +335,15 @@ e_machine = {
     243: "RISC-V",
 }
 
-# Program Header Format dictionaries
 e_ph_type = {
-    0x00: "Unused entry",
-    0x01: "Loadable segment",
-    0x02: "Dynamic linking information",
-    0x03: "Interpreter information",
-    0x04: "Auxiliary information",
-    0x05: "Reserved",
-    0x06: "Segment containing program header table itself",
-    0x07: "Thread-Local Storage template",
+    0x00000000: "Unused entry",
+    0x00000001: "Loadable segment",
+    0x00000002: "Dynamic linking information",
+    0x00000003: "Interpreter information",
+    0x00000004: "Auxiliary information",
+    0x00000005: "Reserved",
+    0x00000006: "Segment containing program header table itself",
+    0x00000007: "Thread-Local Storage template",
     0x60000000: "Reserved inclusive range",
     0x6FFFFFFF: "Reserved inclusive range",
     0x70000000: "Reserved inclusive range",
