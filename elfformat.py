@@ -12,10 +12,11 @@ from construct import (
     Byte,
     IfThenElse,
     this,
+    If,
+    Pointer,
 )
 
 
-# NOTE: since identifier doesn't change based on endianness, we don't use a function
 identifier = Struct(
     "signature" / Const(b"\x7fELF"),
     "elfclass" / Enum(Byte, ELFCLASSNONE=0, ELFCLASS32=1, ELFCLASS64=2),
@@ -47,7 +48,94 @@ identifier = Struct(
 )
 
 
-def header(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
+def program_header(ELFInt32, ELFInt64, is64bit=True):
+    Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+
+    return Struct(
+        "p_type"
+        / Enum(
+            ELFInt32,
+            PT_NULL=0x00000000,
+            PT_LOAD=0x00000001,
+            PT_DYNAMIC=0x00000002,
+            PT_INTERP=0x00000003,
+            PT_NOTE=0x00000004,
+            PT_SHLIB=0x00000005,
+            PT_PHDR=0x00000006,
+            PT_TLS=0x00000007,
+            PT_LDOOS=0x60000000,
+            PT_HIOS=0x6FFFFFFF,
+            PT_LOPROC=0x70000000,
+            PT_HIPROC=0x7FFFFFFF,
+        ),
+        "flags_64" / If(is64bit, ELFInt32),
+        "offset" / Addr,
+        "virtual_address" / Addr,
+        "physical_address" / Addr,
+        "size_file" / Addr,
+        "size_mem" / Addr,
+        "flags_32" / If((not is64bit), ELFInt32),
+        "alignment" / Addr,
+    )
+
+
+def section_header(ELFInt32, ELFInt64, is64bit=True):
+    Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+
+    return Struct(
+        "sh_name" / ELFInt32,
+        "sh_type"
+        / Enum(
+            ELFInt32,
+            SHT_NULL=0x0,
+            SHT_PROGBITS=0x1,
+            SHT_SYMTAB=0x2,
+            SHT_STRTAB=0x3,
+            SHT_RELA=0x4,
+            SHT_HASH=0x5,
+            SHT_DYNAMIC=0x6,
+            SHT_NOTE=0x7,
+            SHT_NOBITS=0x7,
+            SHT_REL=0x9,
+            SHT_SHLIB=0x0A,
+            SHT_DYNSYM=0x0B,
+            SHT_INIT_ARRAY=0x0E,
+            SHT_FINI_ARRAY=0x0F,
+            SHT_PREINIT_ARRAY=0x10,
+            SHT_GROUP=0x11,
+            SHT_SYMTAB_SHNDX=0x12,
+            SHT_NUM=0x13,
+            SHT_LOOS=0x60000000,
+        ),
+        "sh_flags"
+        / Enum(
+            Addr,
+            SHF_WRITE=0x1,
+            SHF_ALLOC=0x2,
+            SHF_EXECINSTR=0x4,
+            SHF_MERGE=0x10,
+            SHF_STRINGS=0x20,
+            SHF_INFO_LINK=0x40,
+            SHF_LINK_ORDER=0x80,
+            SHF_OS_NONCONFORMING=0x100,
+            SHF_GROUP=0x200,
+            SHF_TLS=0x400,
+            SHF_MASKOS=0x0FF00000,
+            SHF_MASKPROC=0xF0000000,
+            SHF_ORDERED=0x4000000,
+            SHF_EXCLUDE=0x8000000,
+        ),
+        "sh_addr" / Addr,
+        "sh_offset" / Addr,
+        "sh_size" / Addr,
+        "sh_link" / ELFInt32,
+        "sh_info" / ELFInt32,
+        "sh_addralign" / Addr,
+        "sh_entsize" / Addr,
+    )
+
+
+def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
     return Struct(
         "type"
         / Enum(
@@ -256,53 +344,30 @@ def header(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
         "shentsize" / ELFInt16,
         "shnum" / ELFInt16,
         "shstrndx" / ELFInt16,
+        "strtab_data_offset"
+        / Pointer(
+            this.sh_offset + this.strtab_section_index * this.sh_entry_size + 16,
+            ELFInt32,
+        ),
+        "program_table" / Pointer(this.ph_offset, program_header(ELFInt32, ELFInt64, is64bit)[this.ph_count]),
+        "sections" / Pointer(this.sh_offset, section_header(ELFInt32, ELFInt64, is64bit)[this.sh_count]),
     )
-
-
-def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
-    return None
 
 
 elf = Struct(
     "identifier" / identifier,
-    "header"
+    "body"
     / IfThenElse(
         this.identifier.encoding == "LSB",
         IfThenElse(
             this.identifier.elfclass == "ELFCLASS64",
-            header(Int16ul, Int32ul, Int64ul, is64bit=True),
-            header(Int16ul, Int32ul, Int64ul, is64bit=False),
+            body(Int16ul, Int32ul, Int64ul, is64bit=True),
+            body(Int16ul, Int32ul, Int64ul, is64bit=False),
         ),
         IfThenElse(
             this.identifier.elfclass == "ELFCLASS64",
-            header(Int16ub, Int32ub, Int64ub, is64bit=True),
-            header(Int16ub, Int32ub, Int64ub, is64bit=False),
+            body(Int16ub, Int32ub, Int64ub, is64bit=True),
+            body(Int16ub, Int32ub, Int64ub, is64bit=False),
         ),
     ),
 )
-
-# program header struct
-# program_header = Struct(
-#     "type" / Int32un,
-#     "flags" / Int32un,
-#     "offset" / Int64un,
-#     "virtual_address" / Int64un,
-#     "physical_address" / Int64un,
-#     "size_file" / Int64un,
-#     "size_memory" / Int64un,
-#     "alignment" / Int64un,
-# )
-
-# section header struct
-# section_header = Struct(
-#     "name" / Int32un,
-#     "type" / Int64un,
-#     "flags" / Int64un,
-#     "virtual_address" / Int64un,  # virtual address of section in memory
-#     "offset" / Int64un,
-#     "size" / Int32un,
-#     "link_index" / Int32un,  # contains section index of associated section
-#     "info" / Int32un,  # contains extra info about section
-#     "address_align" / Int64un,  # required alignment
-#     "entry_size" / Int64un,  # size for fized size entries
-# )
