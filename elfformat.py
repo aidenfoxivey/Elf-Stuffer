@@ -136,6 +136,9 @@ def section_header(ELFInt32, ELFInt64, is64bit=True):
 
 
 def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
+    p_header = program_header(ELFInt32, ELFInt64, is64bit)
+    s_header = section_header(ELFInt32, ELFInt64, is64bit)
+
     return Struct(
         "type"
         / Enum(
@@ -335,22 +338,22 @@ def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
         ),
         "version" / Enum(ELFInt32, EV_NONE=0, EV_CURRENT=1),
         "entry" / IfThenElse(is64bit, ELFInt64, ELFInt32),
-        "phoff" / IfThenElse(is64bit, ELFInt64, ELFInt32),
-        "shoff" / IfThenElse(is64bit, ELFInt64, ELFInt32),
+        "ph_offset" / IfThenElse(is64bit, ELFInt64, ELFInt32),
+        "sh_offset" / IfThenElse(is64bit, ELFInt64, ELFInt32),
         "flags" / ELFInt32,
-        "ehsize" / ELFInt16,
-        "phentsize" / ELFInt16,
-        "phnum" / ELFInt16,
-        "shentsize" / ELFInt16,
-        "shnum" / ELFInt16,
-        "shstrndx" / ELFInt16,
+        "header_size" / ELFInt16,
+        "ph_entry_size" / ELFInt16,
+        "ph_count" / ELFInt16,
+        "sh_entry_size" / ELFInt16,
+        "sh_count" / ELFInt16,
+        "strtab_section_index" / ELFInt16,
         "strtab_data_offset"
         / Pointer(
             this.sh_offset + this.strtab_section_index * this.sh_entry_size + 16,
             ELFInt32,
         ),
-        "program_table" / Pointer(this.ph_offset, program_header(ELFInt32, ELFInt64, is64bit)[this.ph_count]),
-        "sections" / Pointer(this.sh_offset, section_header(ELFInt32, ELFInt64, is64bit)[this.sh_count]),
+        "program_table" / Pointer(this.ph_offset, p_header[this.ph_count]),
+        "sections" / Pointer(this.sh_offset, s_header[this.sh_count]),
     )
 
 
