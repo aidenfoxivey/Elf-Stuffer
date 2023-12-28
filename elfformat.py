@@ -4,20 +4,21 @@ from construct import (
     Int64ub,
     Int32ub,
     Int16ub,
-    Int16un,
+    Int16ul,
     Padding,
-    Int32un,
-    Int64un,
+    Int32ul,
+    Int64ul,
     Enum,
     Byte,
     IfThenElse,
     this,
 )
 
-# NOTE: since identifier doesn't change based on endianness, we don't need to use IfThenElse
+
+# NOTE: since identifier doesn't change based on endianness, we don't use a function
 identifier = Struct(
     "signature" / Const(b"\x7fELF"),
-    "class" / Enum(Byte, ELFCLASSNONE=0, ELFCLASS32=1, ELFCLASS64=2),
+    "elfclass" / Enum(Byte, ELFCLASSNONE=0, ELFCLASS32=1, ELFCLASS64=2),
     "encoding" / Enum(Byte, ELFDATANONE=0, LSB=1, MSB=2),
     "version" / Enum(Byte, EV_NONE=0, EV_CURRENT=1),
     "osabi"
@@ -258,20 +259,27 @@ def header(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
     )
 
 
+def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
+    return None
+
+
 elf = Struct(
     "identifier" / identifier,
     "header"
     / IfThenElse(
         this.identifier.encoding == "LSB",
-        header(Int16un, Int32un, Int64un),
-        header(Int16ub, Int32ub, Int64ub),
+        IfThenElse(
+            this.identifier.elfclass == "ELFCLASS64",
+            header(Int16ul, Int32ul, Int64ul, is64bit=True),
+            header(Int16ul, Int32ul, Int64ul, is64bit=False),
+        ),
+        IfThenElse(
+            this.identifier.elfclass == "ELFCLASS64",
+            header(Int16ub, Int32ub, Int64ub, is64bit=True),
+            header(Int16ub, Int32ub, Int64ub, is64bit=False),
+        ),
     ),
-    # "body" / IfThenElse(this.identifier.encoding == "LSB",
-    #     body(Int16ul, Int32ul),
-    #     body(Int16ub, Int32ub),
-    # ),
 )
-
 
 # program header struct
 # program_header = Struct(
