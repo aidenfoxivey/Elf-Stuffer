@@ -68,13 +68,25 @@ def program_header(ELFInt32, ELFInt64, is64bit=True):
             PT_LOPROC=0x70000000,
             PT_HIPROC=0x7FFFFFFF,
         ),
-        "flags_64" / If(is64bit, ELFInt32),
+        "flags_64"
+        / If(
+            is64bit,
+            Enum(
+                ELFInt32, R__=0x4, RW_=0x6, RWX=0x7, _WX=0x3, __X=0x1, _W_=0x2, R_X=0x5
+            ),
+        ),
         "offset" / Addr,
         "virtual_address" / Addr,
         "physical_address" / Addr,
         "size_file" / Addr,
         "size_mem" / Addr,
-        "flags_32" / If((not is64bit), ELFInt32),
+        "flags_32"
+        / If(
+            (not is64bit),
+            Enum(
+                ELFInt32, R__=0x4, RW_=0x6, RWX=0x7, _WX=0x3, __X=0x1, _W_=0x2, R_X=0x5
+            ),
+        ),
         "alignment" / Addr,
     )
 
