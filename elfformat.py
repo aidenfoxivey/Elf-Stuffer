@@ -14,6 +14,7 @@ from construct import (
     this,
     If,
     Pointer,
+    CString,
 )
 
 
@@ -95,7 +96,8 @@ def section_header(ELFInt32, ELFInt64, is64bit=True):
     Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
 
     return Struct(
-        "sh_name" / ELFInt32,
+        "sh_name_offset" / ELFInt32,
+        "sh_name" / Pointer(this._.strtab_data_offset + this.sh_name_offset, CString("utf8")),
         "sh_type"
         / Enum(
             ELFInt32,
