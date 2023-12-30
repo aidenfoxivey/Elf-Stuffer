@@ -7,6 +7,7 @@ from construct import (
 )
 import sys
 import elfformat
+from capstone import Cs, CS_ARCH_ARM64, CS_MODE_ARM
 
 
 def main() -> None:
@@ -17,9 +18,24 @@ def main() -> None:
     with open(sys.argv[1], "rb") as f:
         bytes = f.read()
 
+        print(f"Parsing {sys.argv[1]}...")
         data = try_parse(elfformat.elf, bytes)
 
-        print(data)
+        sections = []
+
+        for section in data.body.program_table:
+            rg = range(section.virtual_address, section.virtual_address + section.size_mem)
+            print(f"Memory range is {rg}")
+            if (data.body.entry in rg):
+                sections += (rg, section)
+
+        print(f"Disassembling {sys.argv[1]}...")
+        CODE = bytes[data.body.entry : sections[1].virtual_address + sections[1].size_mem]
+
+        md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+
+        for address, size, mnemonic, op_str in md.disasm_lite(CODE, data.body.entry):
+            print("0x%x:\t%s\t%s" % (address, mnemonic, op_str))
 
 
 def hexdump(b: bytes) -> None:
