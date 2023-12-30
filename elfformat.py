@@ -97,7 +97,7 @@ def section_header(ELFInt32, ELFInt64, is64bit=True):
 
     return Struct(
         "sh_name_offset" / ELFInt32,
-        "sh_name" / Pointer(this._.strtab_data_offset + this.sh_name_offset, CString("utf8")),
+        "sh_name" / Pointer(this._.strtab_data_offset + this.sh_name_offset, CString("utf-8")),
         "sh_type"
         / Enum(
             ELFInt32,
@@ -363,7 +363,7 @@ def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
         "strtab_section_index" / ELFInt16,
         "strtab_data_offset"
         / Pointer(
-            this.sh_offset + this.strtab_section_index * this.sh_entry_size + 16,
+            this.sh_offset + this.strtab_section_index * this.sh_entry_size + (24 if is64bit else 16),
             ELFInt32,
         ),
         "program_table" / Pointer(this.ph_offset, p_header[this.ph_count]),
