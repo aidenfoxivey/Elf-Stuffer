@@ -48,9 +48,32 @@ identifier = Struct(
     Padding(7),
 )
 
+def dynamic_entry(ELFInt32, ELFInt64, is64bit=True):
+    Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+    
+    return Struct(
+        "dynamic_tag" / Enum(
+            # LIST IS NOT COMPLETE YET - im lazy
+            ELFInt64,
+            Null = 0,
+            Needed = 1,
+            PltRelSz = 2,
+            PltGot = 3,
+            Hash = 4,
+            StrTab = 5,
+            SymTab = 6,
+            Rela = 7,
+            RelaSz = 8,
+            RelaEnt = 9,
+            RelACount = 0x6ffffff9,
+        ),
+        "addr" / Pointer(8, Addr),
+    ),
+
 
 def program_header(ELFInt32, ELFInt64, is64bit=True):
     Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+    d_table = dynamic_entry(ELFInt32, ELFInt64, is64bit)
 
     return Struct(
         "p_type"
@@ -89,6 +112,11 @@ def program_header(ELFInt32, ELFInt64, is64bit=True):
             ),
         ),
         "alignment" / Addr,
+        "dynamic_table" 
+        / If(
+            (this.p_type=="PT_DYNAMIC"),
+            Pointer(this.offset, d_table[0]),
+        ),
     )
 
 
