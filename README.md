@@ -11,6 +11,10 @@ binary is the host encoding or an arbitrary one.
 Thanks must be given to the [elf32.py](https://github.com/construct/construct/blob/master/deprecated_gallery/elf32.py) example provided
 in Construct's deprecated gallery, as it demonstrated a very clean way to construct the code.
 
+A version of our current example has been [added to Construct](https://github.com/construct/construct/blob/master/gallery/elf.py).
+
+Also, we use [Capstone Dissassembler](http://www.capstone-engine.org/) for optional dissassembly of code within the files.
+
 ## Resources
 
 AARCH64 Syscalls available [here](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/constants/syscalls.md#arm64-64_bit).
