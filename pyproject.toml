@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "elf"
 version = "0.1.0"
-description = "An ELF exploration toolkit for AARCH64 Linux."
-authors = ["Your Name <you@example.com>"]
+description = "An ELF exploration toolkit for Linux."
+authors = ["Aiden Fox Ivey <aiden@fox-ivey.com>", "Alisya K"]
 license = "BSD 3-Clause"
 readme = "README.md"
 
