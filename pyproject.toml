@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "elf"
+name = "Elf-Stuffer"
 version = "0.1.0"
 description = "An ELF exploration toolkit for AARCH64 Linux."
 authors = ["Your Name <you@example.com>"]
