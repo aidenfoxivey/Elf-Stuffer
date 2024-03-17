@@ -21,16 +21,19 @@ def main() -> None:
         print(f"Parsing {sys.argv[1]}...")
         data = try_parse(elfformat.elf, bytes)
 
-        sections = []
+        segments = []
 
-        for section in data.body.program_table:
-            rg = range(section.virtual_address, section.virtual_address + section.size_mem)
+        for segment in data.body.program_table:
+            rg = range(segment.virtual_address, segment.virtual_address + segment.size_mem)
             print(f"Memory range is {rg}")
             if (data.body.entry in rg):
-                sections += (rg, section)
+                segments += (rg, segment)
+            
+            if (segment.p_type=="PT_DYNAMIC"):
+                print(segment)
 
         print(f"Disassembling {sys.argv[1]}...")
-        CODE = bytes[data.body.entry : sections[1].virtual_address + sections[1].size_mem]
+        CODE = bytes[data.body.entry : segments[1].virtual_address + segments[1].size_mem]
 
         md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
 

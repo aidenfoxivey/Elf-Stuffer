@@ -15,8 +15,8 @@ from construct import (
     If,
     Pointer,
     CString,
+    RepeatUntil,
 )
-
 
 identifier = Struct(
     "signature" / Const(b"\x7fELF"),
@@ -49,8 +49,73 @@ identifier = Struct(
 )
 
 
-def program_header(ELFInt32, ELFInt64, is64bit=True):
+def dynamic_entry(ELFInt32, ELFInt64, is64bit=True) -> Struct:
+    """
+    Read this for more info:
+    https://refspecs.linuxbase.org/elf/gabi4+/ch5.dynamic.html
+
+    Don't blame me if the link is dead.
+    """
     Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+
+    return Struct(
+        "dynamic_tag"
+        / Enum(
+            Addr,
+            DT_NULL=0,
+            DT_NEEDED=1,
+            DT_PLTRELSZ=2,
+            DT_PLTGOT=3,
+            DT_HASH=4,
+            DT_STRTAB=5,
+            DT_SYMTAB=6,
+            DT_RELA=7,
+            DT_RELASZ=8,
+            DT_RELAENT=9,
+            DT_STRSZ=10,
+            DT_SYMENT=11,
+            DT_INIT=12,
+            DT_FINI=13,
+            DT_SONAME=14,
+            DT_RPATH=15,
+            DT_SYMBOLIC=16,
+            DT_REL=17,
+            DT_RELSZ=18,
+            DT_RELENT=19,
+            DT_PLTREL=20,
+            DT_DEBUG=21,
+            DT_TEXTREL=22,
+            DT_JMPREL=23,
+            DT_BIND_NOW=24,
+            DT_INIT_ARRAY=25,
+            DT_FINI_ARRAY=26,
+            DT_INIT_ARRAYSZ=27,
+            DT_FINI_ARRAYSZ=28,
+            DT_RUNPATH=29,
+            DT_FLAGS=30,
+            DT_ENCODING=32,
+            DT_PREINIT_ARRAY=32,
+            DT_PREINIT_ARRAYSZ=33,
+            DT_LOOS=0x6000000D,
+            DT_HIOS=0x6FFFF000,
+            DT_LOPROC=0x70000000,
+            DT_HIPROC=0x7FFFFFFF,
+            # readelf's constributions
+            DT_VERNEED=0x000000006ffffffe,
+            DT_VERNEEDNUM=0x000000006fffffff,
+            DT_VERSYN=0x000000006ffffff0,
+            # Amos' bs additions
+            DT_GNU_HASH=0x6FFFFEF5,
+            DT_FLAGS_1=0x6FFFFFFB,
+            DT_RELACOUNT=0x6FFFFFF9,
+        ),
+        "d_un" / Addr,
+    )
+
+
+def program_header(ELFInt32, ELFInt64, is64bit=True) -> Struct:
+    Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
+    d_table = dynamic_entry(ELFInt32, ELFInt64, is64bit)
 
     return Struct(
         "p_type"
@@ -89,10 +154,20 @@ def program_header(ELFInt32, ELFInt64, is64bit=True):
             ),
         ),
         "alignment" / Addr,
+        "dynamic_table"
+        / If(
+            (this.p_type == "PT_DYNAMIC"),
+            Pointer(
+                this.offset,
+                RepeatUntil(
+                    lambda entry, lst, ctx: entry.dynamic_tag == "DT_NULL", d_table
+                ),
+            ),
+        ),
     )
 
 
-def section_header(ELFInt32, ELFInt64, is64bit=True):
+def section_header(ELFInt32, ELFInt64, is64bit=True) -> Struct:
     Addr = IfThenElse(is64bit, ELFInt64, ELFInt32)
 
     return Struct(
@@ -150,7 +225,7 @@ def section_header(ELFInt32, ELFInt64, is64bit=True):
     )
 
 
-def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True):
+def body(ELFInt16, ELFInt32, ELFInt64, is64bit=True) -> Struct:
     p_header = program_header(ELFInt32, ELFInt64, is64bit)
     s_header = section_header(ELFInt32, ELFInt64, is64bit)
 
